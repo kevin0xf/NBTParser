@@ -90,6 +90,11 @@ public class NBTReader extends ByteReader {
                 continue;
             }
 
+            switch (nextType) {
+                case 0x07 -> {}
+                case 0xB -> {}
+                case 0xC -> {}
+            }
             // Read tag
             NBTPrimitive<Object> objectNBTPrimitive = readTag(readName(), nextType);
             result.add(objectNBTPrimitive);
