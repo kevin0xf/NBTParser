@@ -21,7 +21,10 @@ public class ByteReader {
     public byte[] readBytes(int count) {
         byte[] bytes = new byte[count];
         for (int i = 0; i < count; i++) {
-            bytes[i] = data[index++];
+            byte datum = data[index++];
+            if (datum == -1)
+                datum = 0;
+            bytes[i] = datum;
         }
 
         if (endian == Endian.SMALL) {
@@ -68,7 +71,7 @@ public class ByteReader {
         byte[] bytes = readBytes(2);
         short result = 0;
         for (int i = 0; i < bytes.length; i++) {
-            result |= bytes[i] << 8 - 8 * i;
+            result |= (bytes[i]) << 8 - 8 * i;
         }
 
         return result;
@@ -87,6 +90,24 @@ public class ByteReader {
 
     public double readDouble() {
         return Double.longBitsToDouble(readLong());
+    }
+
+    public int[] readIntArray(int length) {
+        int[] ints = new int[length];
+        for (int i = 0; i < length; i++) {
+            ints[i] = readInt();
+        }
+
+        return ints;
+    }
+
+    public long[] readLongArray(int length) {
+        long[] longs = new long[length];
+        for (int i = 0; i < length; i++) {
+            longs[i] = readLong();
+        }
+
+        return longs;
     }
 
     public void setEndian(Endian endian) {

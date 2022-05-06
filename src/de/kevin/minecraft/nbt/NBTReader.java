@@ -1,10 +1,7 @@
 package de.kevin.minecraft.nbt;
 
 import de.kevin.minecraft.binary.ByteReader;
-import de.kevin.minecraft.nbt.type.NBTCompound;
-import de.kevin.minecraft.nbt.type.NBTElement;
-import de.kevin.minecraft.nbt.type.NBTList;
-import de.kevin.minecraft.nbt.type.NBTPrimitive;
+import de.kevin.minecraft.nbt.type.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,22 +15,22 @@ public class NBTReader extends ByteReader {
     }
 
     private NBTList readList() {
-        List<Object> elements = new ArrayList<>();
+        List<NBTElement> elements = new ArrayList<>();
 
         String name = readName();
         byte typeID = readByte();
         int length = readInt();
 
-        Supplier<Object> value = switch (typeID) {
+        Supplier<NBTElement> value = switch (typeID) {
             case 0xA -> () -> readCompound("");
-            case 0x01 -> this::readByte;
-            case 0x02 -> this::readShort;
-            case 0x03 -> this::readInt;
-            case 0x04 -> this::readLong;
-            case 0x05 -> this::readFloat;
-            case 0x06 -> this::readDouble;
-            case 0x08 -> () -> new String(readBytes(readUnsignedShort())); // readShort -> String length
-            case 0x09 -> this::readList;
+            case 0x1 -> () -> new NBTPrimitive<Byte>(readByte(), 0x1);
+            case 0x2 -> () -> new NBTPrimitive<Short>(readShort(), 0x2);
+            case 0x3 -> () -> new NBTPrimitive<Integer>(readInt(), 0x3);
+            case 0x4 -> () -> new NBTPrimitive<Long>(readLong(), 0x4);
+            case 0x5 -> () -> new NBTPrimitive<Float>(readFloat(), 0x5);
+            case 0x6 -> () -> new NBTPrimitive<Double>(readDouble(), 0x6);
+            case 0x8 -> () -> new NBTPrimitive<String>(new String(readBytes(readUnsignedShort())), 0x8); // readShort -> String length
+            case 0x9 -> this::readList;
             default -> throw new IllegalStateException("Unexpected value: " + typeID);
         };
 
@@ -60,16 +57,31 @@ public class NBTReader extends ByteReader {
             default -> -1;
         };
 
-        return new NBTPrimitive<>(name, value);
+        return new NBTPrimitive<>(name, value, type);
     }
 
     public NBTCompound parse() {
         byte type = readByte();
         String name = readName();
         assert type == 0xA;
-        assert name.isEmpty();
 
         return readCompound(name);
+    }
+
+    private NBTArray readArray(int type) {
+        String name = readName();
+        int length = readInt();
+        if (length < 1)
+            return new NBTArray(name, new byte[]{}, type);
+
+        Object result = null;
+        switch (type) {
+            case 0x7 -> result = readBytes(length);
+            case 0xB -> result = readIntArray(length);
+            case 0xC -> result = readLongArray(length);
+        }
+
+        return new NBTArray(name, result, type);
     }
 
     private NBTCompound readCompound(String name) {
@@ -90,11 +102,14 @@ public class NBTReader extends ByteReader {
                 continue;
             }
 
+            // Read array
             switch (nextType) {
-                case 0x07 -> {}
-                case 0xB -> {}
-                case 0xC -> {}
+                case 0x07, 0xB, 0xC -> {
+                    result.add(readArray(nextType));
+                    continue;
+                }
             }
+
             // Read tag
             NBTPrimitive<Object> objectNBTPrimitive = readTag(readName(), nextType);
             result.add(objectNBTPrimitive);

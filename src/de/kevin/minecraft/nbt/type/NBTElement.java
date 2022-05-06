@@ -10,4 +10,6 @@ public abstract class NBTElement {
     public String getName() {
         return name;
     }
+
+    public abstract String toString();
 }
